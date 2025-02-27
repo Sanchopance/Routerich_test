@@ -1,6 +1,6 @@
 #!/bin/sh
 
-URL="https://raw.githubusercontent.com/routerich/RouterichAX3000_configs/refs/heads/main"
+URL="https://raw.githubusercontent.com/Sanchopance/Routerich/refs/heads/main"
 DIR="/etc/config"
 DIR_BACKUP="/root/backup"
 config_files="dhcp
@@ -20,23 +20,42 @@ checkAndAddDomainPermanentName()
     uci commit dhcp
   fi
 }
+# Список пакетов, которые нужно проверить и установить/обновить
+PACKAGES="youtubeUnblock luci-app-youtubeUnblock https-dns-proxy kmod-nft-queue kmod-nf-conntrack"
 
-echo "Upgrade packages..."
-
+# Обновляем список пакетов
 opkg update
-opkg upgrade youtubeUnblock
-opkg upgrade luci-app-youtubeUnblock
+
+for pkg in $PACKAGES; do
+    # Проверяем, установлен ли пакет
+    if opkg list-installed | grep -q "^$pkg "; then
+        echo "Пакет $pkg уже установлен. Проверяем наличие обновлений..."
+        opkg upgrade $pkg
+    else
+        echo "Пакет $pkg не установлен. Устанавливаем..."
+        opkg install $pkg
+    fi
+done
+
+# Проверка, запущен ли https-dns-proxy
+if ! service https-dns-proxy status > /dev/null 2>&1; then
+    echo "Сервис https-dns-proxy не запущен. Включаем и запускаем..."
+    service https-dns-proxy enable  # Включаем автозапуск при загрузке
+    service https-dns-proxy start   # Запускаем сервис
+else
+    echo "Сервис https-dns-proxy уже запущен."
+fi
 
 if [ ! -d "$DIR_BACKUP" ]
 then
-  echo "Backup files..."
+  echo "Делаем backup..."
   mkdir $DIR_BACKUP
   for file in $config_files
   do
     cp -f "$DIR/$file" "$DIR_BACKUP/$file"  
   done
 
-  echo "Replace configs..."
+  echo "Заменяем конфиги..."
 
   for file in $config_files
   do
@@ -47,7 +66,7 @@ then
   done
 fi
 
-echo "Configure dhcp..."
+echo "Настраиваем dhcp..."
 
 uci set dhcp.cfg01411c.strictorder='1'
 uci set dhcp.cfg01411c.filter_aaaa='1'
@@ -107,7 +126,7 @@ uci add_list dhcp.cfg01411c.server='/*.gstatic.com/127.0.0.1#5056'
 uci add_list dhcp.cfg01411c.server='/*.brawlstarsgame.com/127.0.0.1#5056'
 uci commit dhcp
 
-echo "Add unblock ChatGPT..."
+echo "Разблокируем ChatGPT..."
 
 checkAndAddDomainPermanentName "chatgpt.com" "94.131.119.85"
 checkAndAddDomainPermanentName "openai.com" "94.131.119.85"
@@ -119,7 +138,7 @@ nameRule="option name 'Block_UDP_443'"
 str=$(grep -i "$nameRule" /etc/config/firewall)
 if [ -z "$str" ] 
 then
-  echo "Add block QUIC..."
+  echo "Блокируем QUIC..."
 
   uci add firewall rule # =cfg2492bd
   uci set firewall.@rule[-1].name='Block_UDP_80'
@@ -143,15 +162,15 @@ cronTask="0 4 * * * wget -O - $URL/configure_zaprets.sh | sh"
 str=$(grep -i "0 4 \* \* \* wget -O - $URL/configure_zaprets.sh | sh" /etc/crontabs/root)
 if [ -z "$str" ] 
 then
-  echo "Add cron task auto run configure_zapret..."
+  echo "Добавляем в автозапуск обновление конфига..."
   echo "$cronTask" >> /etc/crontabs/root
 fi
 
-echo "Restart service..."
+echo "Перезапускаем сервисы..."
 
 service youtubeUnblock restart
 service https-dns-proxy restart
 service dnsmasq restart
 service odhcpd restart
 
-echo "Configure complete..."
+echo "Все готово"
