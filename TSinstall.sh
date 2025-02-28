@@ -13,7 +13,7 @@ install_torrserver() {
     # Проверяем, установлен ли TorrServer
     if [ -f "${binary}" ]; then
         echo "TorrServer уже установлен в ${binary}."
-        echo "Для удаления используйте: $0 --remove или -r"
+        echo "Для удаления скачайте скрипт и используйте: $0 --remove или -r"
         exit 0
     fi
 
