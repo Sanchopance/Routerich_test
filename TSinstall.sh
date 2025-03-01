@@ -42,6 +42,17 @@ install_torrserver() {
     curl -L -o ${binary} ${url} || { echo "Ошибка загрузки TorrServer"; exit 1; }
     chmod +x ${binary}
 
+    # Устанавливаем UPX, если он не установлен
+    if ! command -v upx &> /dev/null; then
+        echo "Устанавливаем UPX..."
+        opkg update
+        opkg install upx || { echo "Ошибка установки UPX"; exit 1; }
+    fi
+
+    # Сжимаем бинарный файл TorrServer с использованием UPX
+    echo "Сжимаем бинарный файл TorrServer с использованием UPX..."
+    upx --lzma --best ${binary} || { echo "Ошибка сжатия TorrServer"; exit 1; }
+
     # Создаем скрипт init.d для управления службой
     cat << EOF > ${init_script}
 #!/bin/sh /etc/rc.common
