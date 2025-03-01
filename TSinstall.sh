@@ -6,7 +6,19 @@ dir="/opt/torrserver"
 binary="${dir}/torrserver"
 init_script="/etc/init.d/torrserver"
 
+# Переменная для управления сжатием
+compress=false
+
 echo "Проверяем наличие TorrServer..."
+
+# Функция для проверки, запущен ли скрипт в интерактивном режиме
+is_interactive() {
+    if [ -t 0 ]; then
+        return 0  # Интерактивный режим
+    else
+        return 1  # Неинтерактивный режим
+    fi
+}
 
 # Функция для установки TorrServer
 install_torrserver() {
@@ -42,9 +54,8 @@ install_torrserver() {
     curl -L -o ${binary} ${url} || { echo "Ошибка загрузки TorrServer"; exit 1; }
     chmod +x ${binary}
 
-    # Запрос на сжатие файла
-    read -p "Хотите сжать бинарный файл TorrServer с помощью UPX? (y/n): " compress_choice
-    if [ "$compress_choice" = "y" ] || [ "$compress_choice" = "Y" ]; then
+    # Управление сжатием
+    if [ "$compress" = true ]; then
         # Устанавливаем UPX, если он не установлен
         if ! command -v upx &> /dev/null; then
             echo "Устанавливаем UPX..."
@@ -56,8 +67,30 @@ install_torrserver() {
         echo "Сжимаем бинарный файл TorrServer с использованием UPX..."
         upx --lzma --best ${binary} || { echo "Ошибка сжатия TorrServer"; exit 1; }
         echo "Бинарный файл TorrServer успешно сжат."
+    elif [ "$compress" = false ]; then
+        echo "Сжатие бинарного файла TorrServer пропущено."
     else
-        echo "Сжатие бинарного файла TorrServer пропущено по вашему выбору."
+        # Если параметр сжатия не задан, спрашиваем пользователя (только в интерактивном режиме)
+        if is_interactive; then
+            read -p "Хотите сжать бинарный файл TorrServer с помощью UPX? (y/n): " compress_choice
+            if [ "$compress_choice" = "y" ] || [ "$compress_choice" = "Y" ]; then
+                # Устанавливаем UPX, если он не установлен
+                if ! command -v upx &> /dev/null; then
+                    echo "Устанавливаем UPX..."
+                    opkg update
+                    opkg install upx || { echo "Ошибка установки UPX"; exit 1; }
+                fi
+
+                # Сжимаем бинарный файл TorrServer с использованием UPX
+                echo "Сжимаем бинарный файл TorrServer с использованием UPX..."
+                upx --lzma --best ${binary} || { echo "Ошибка сжатия TorrServer"; exit 1; }
+                echo "Бинарный файл TorrServer успешно сжат."
+            else
+                echo "Сжатие бинарного файла TorrServer пропущено по вашему выбору."
+            fi
+        else
+            echo "Скрипт запущен в неинтерактивном режиме. Сжатие бинарного файла TorrServer пропущено."
+        fi
     fi
 
     # Создаем скрипт init.d для управления службой
@@ -112,12 +145,27 @@ remove_torrserver() {
     echo "TorrServer успешно удален."
 }
 
+# Парсинг аргументов командной строки
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --compress)
+            compress=true
+            shift
+            ;;
+        --no-compress)
+            compress=false
+            shift
+            ;;
+        --remove|-r)
+            remove_torrserver
+            exit 0
+            ;;
+        *)
+            echo "Использование: $0 [--compress|--no-compress] [--remove|-r]"
+            exit 1
+            ;;
+    esac
+done
+
 # Основная логика скрипта
-case "$1" in
-    --remove|-r)
-        remove_torrserver
-        ;;
-    *)
-        install_torrserver
-        ;;
-esac
+install_torrserver
