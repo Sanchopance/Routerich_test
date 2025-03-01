@@ -59,14 +59,23 @@ install_torrserver() {
         # Устанавливаем UPX, если он не установлен
         if ! command -v upx &> /dev/null; then
             echo "Устанавливаем UPX..."
-            opkg update
-            opkg install upx || { echo "Ошибка установки UPX"; exit 1; }
+            if opkg update && opkg install upx; then
+                echo "UPX успешно установлен."
+            else
+                echo "Не удалось установить UPX. Продолжаем установку без сжатия."
+                compress=false
+            fi
         fi
 
         # Сжимаем бинарный файл TorrServer с использованием UPX
-        echo "Сжимаем бинарный файл TorrServer с использованием UPX..."
-        upx --lzma --best ${binary} || { echo "Ошибка сжатия TorrServer"; exit 1; }
-        echo "Бинарный файл TorrServer успешно сжат."
+        if [ "$compress" = true ]; then
+            echo "Сжимаем бинарный файл TorrServer с использованием UPX..."
+            if upx --lzma --best ${binary}; then
+                echo "Бинарный файл TorrServer успешно сжат."
+            else
+                echo "Ошибка сжатия TorrServer. Продолжаем установку без сжатия."
+            fi
+        fi
     elif [ "$compress" = false ]; then
         echo "Сжатие бинарного файла TorrServer пропущено."
     else
@@ -77,14 +86,25 @@ install_torrserver() {
                 # Устанавливаем UPX, если он не установлен
                 if ! command -v upx &> /dev/null; then
                     echo "Устанавливаем UPX..."
-                    opkg update
-                    opkg install upx || { echo "Ошибка установки UPX"; exit 1; }
+                    if opkg update && opkg install upx; then
+                        echo "UPX успешно установлен."
+                    else
+                        echo "Не удалось установить UPX. Продолжаем установку без сжатия."
+                        compress_choice="n"
+                    fi
                 fi
 
                 # Сжимаем бинарный файл TorrServer с использованием UPX
-                echo "Сжимаем бинарный файл TorrServer с использованием UPX..."
-                upx --lzma --best ${binary} || { echo "Ошибка сжатия TorrServer"; exit 1; }
-                echo "Бинарный файл TorrServer успешно сжат."
+                if [ "$compress_choice" = "y" ] || [ "$compress_choice" = "Y" ]; then
+                    echo "Сжимаем бинарный файл TorrServer с использованием UPX..."
+                    if upx --lzma --best ${binary}; then
+                        echo "Бинарный файл TorrServer успешно сжат."
+                    else
+                        echo "Ошибка сжатия TorrServer. Продолжаем установку без сжатия."
+                    fi
+                else
+                    echo "Сжатие бинарного файла TorrServer пропущено по вашему выбору."
+                fi
             else
                 echo "Сжатие бинарного файла TorrServer пропущено по вашему выбору."
             fi
