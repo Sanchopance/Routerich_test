@@ -57,7 +57,7 @@ install_torrserver() {
         upx --lzma --best ${binary} || { echo "Ошибка сжатия TorrServer"; exit 1; }
         echo "Бинарный файл TorrServer успешно сжат."
     else
-        echo "Сжатие бинарного файла TorrServer пропущено."
+        echo "Сжатие бинарного файла TorrServer пропущено по вашему выбору."
     fi
 
     # Создаем скрипт init.d для управления службой
