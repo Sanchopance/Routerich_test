@@ -21,7 +21,7 @@ checkAndAddDomainPermanentName()
   fi
 }
 # Список пакетов, которые нужно проверить и установить/обновить
-PACKAGES="youtubeUnblock luci-app-youtubeUnblock https-dns-proxy kmod-nft-queue kmod-nf-conntrack"
+PACKAGES="youtubeUnblock luci-app-youtubeUnblock https-dns-proxy luci-app-https-dns-proxy kmod-nft-queue kmod-nf-conntrack"
 
 # Обновляем список пакетов
 opkg update
